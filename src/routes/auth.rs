@@ -1,15 +1,56 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use axum::{
-    extract::{FromRef, State}, http::{header::SET_COOKIE, HeaderMap, StatusCode}, response::{IntoResponse, Redirect}, routing::{get, post}, Json, Router
+    extract::{Query, State}, http::{header::SET_COOKIE, HeaderMap, header::COOKIE }, response::{IntoResponse, Redirect}, routing::{get, head, post}, Json, Router
 };
-use oauth2::{basic::BasicClient, CsrfToken, EndpointNotSet, EndpointSet, Scope};
+use oauth2::{basic::BasicClient, AuthorizationCode, CsrfToken, EndpointNotSet, EndpointSet, Scope, TokenResponse};
 use async_session::{MemoryStore, Session, SessionStore};
+use serde::Deserialize;
+use cookie::Cookie;
 
 use crate::models::app_error::AppError;
 use crate::AppState;
 
 static COOKIE_NAME: &str = "SESSION";
 static CSRF_TOKEN: &str = "csrf_token";
+
+async fn csrf_token_validation_workflow(
+    auth_request: &AuthRequest,
+    cookie: &Cookie<'_>,
+    store: &MemoryStore,
+) -> Result<(), AppError> {
+    // Extract the cookie from the request
+    let cookie = cookie
+        .value();
+
+    // Load the session
+    let session = match store
+        .load_session(cookie.to_string())
+        .await
+        .context("failed to load session")?
+    {
+        Some(session) => session,
+        None => return Err(anyhow!("Session not found").into()),
+    };
+
+    // Extract the CSRF token from the session
+    let stored_csrf_token = session
+        .get::<CsrfToken>(CSRF_TOKEN)
+        .context("CSRF token not found in session")?
+        .to_owned();
+
+    // Cleanup the CSRF token session
+    store
+        .destroy_session(session)
+        .await
+        .context("Failed to destroy old session")?;
+
+    // Validate CSRF token is the same as the one in the auth request
+    if *stored_csrf_token.secret() != auth_request.state {
+        return Err(anyhow!("CSRF token mismatch").into());
+    }
+
+    Ok(())
+}
 
 pub async fn get_userinfo() -> impl IntoResponse {
 
@@ -26,14 +67,19 @@ pub async fn spotify_auth(
     let mut session = Session::new();
     session
         .insert(CSRF_TOKEN, &csrf_token)
-        .context("failed ot insert CSRF token into session");
+        .context("failed ot insert CSRF token into session")
+        .context("Session failure");
 
     let cookie = store
         .store_session(session)
         .await
         .context("failed to store CSRF token session");
 
-    let cookie = format!("{COOKIE_NAME}={cookie:?}; SameSite=Lax; HttpOnly; Secure; Path=/");
+    let cookie = match cookie? {
+        Some(cookie) => cookie,
+        None => "".to_string()
+    };
+    let cookie = format!("{COOKIE_NAME}={cookie}; SameSite=Lax; HttpOnly; Path=/");
     let mut headers = HeaderMap::new();
     headers.insert(
         SET_COOKIE,
@@ -43,10 +89,50 @@ pub async fn spotify_auth(
     Ok((headers, Redirect::to(auth_url.as_ref())))
 }
 
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct AuthRequest {
+    code: String,
+    state: String,
+}
+
+pub async fn login_authorized(
+    headers: HeaderMap,
+    Query(query): Query<AuthRequest>,
+    State(store): State<MemoryStore>,
+    State(oauth_client): State<BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>>,
+) -> Result<impl IntoResponse, AppError> {
+    let cookie_header = headers.get(COOKIE).context("Failed to get Cookie")?.to_str()?;
+    let cookies = Cookie::parse(cookie_header)?;
+    csrf_token_validation_workflow(&query, &cookies, &store);
+
+    let http_client = reqwest::ClientBuilder::new()
+        .build()
+        .expect("Client should build");
+    let token = oauth_client
+        .exchange_code(AuthorizationCode::new(query.code.clone()))
+        .request_async(&http_client)
+        .await
+        .context("Failed to request token from auth server")?;
+    println!("Token: {:?}", token.access_token().clone().into_secret());
+    let mut session = Session::new();
+    let _ = session
+        .insert("token", token.access_token());
+    let cookie = store
+        .store_session(session)
+        .await
+        .context("Failed to store session");
+    let cookie = format!("{COOKIE_NAME}={cookie:?}; SameSite=Lax; HttpOnly; Secure; Path=/");
+    let mut headers = HeaderMap::new();
+    headers.insert(SET_COOKIE, cookie.parse().context("Failed to parse cookie")?);
+    Ok((headers, Redirect::to("/")))
+}
+
 pub fn get_routes(state: AppState) -> Router {
 
     Router::new()
         .route("/auth/spotify/userinfo", get(get_userinfo))
         .route("/auth/spotify", get(spotify_auth))
+        .route("/auth/authorized", get(login_authorized))
         .with_state(state)
 }
