@@ -7,7 +7,7 @@ use async_session::{MemoryStore, Session, SessionStore};
 use serde::Deserialize;
 use cookie::Cookie;
 
-use crate::models::app_error::AppError;
+use crate::models::{app_error::AppError, user::User};
 use crate::AppState;
 
 static COOKIE_NAME: &str = "SESSION";
@@ -52,8 +52,10 @@ async fn csrf_token_validation_workflow(
     Ok(())
 }
 
-pub async fn get_userinfo() -> impl IntoResponse {
-
+pub async fn get_userinfo(
+    State(store): State<MemoryStore>,
+) -> impl IntoResponse {
+    
 }
 
 pub async fn spotify_auth(
@@ -115,9 +117,21 @@ pub async fn login_authorized(
         .await
         .context("Failed to request token from auth server")?;
     println!("Token: {:?}", token.access_token().clone().into_secret());
+
+    let user_data = http_client
+        .get("https://api.spotify.com/v1/me")
+        .bearer_auth(token.access_token().secret())
+        .send()
+        .await
+        .context("Failed sending UserInfo request")?
+        .json::<User>()
+        .await
+        .context("Failed to deserialize UserInfo");
     let mut session = Session::new();
     let _ = session
-        .insert("token", token.access_token());
+        .insert("access_token", token.access_token());
+    let _ = session
+        .insert("user", &user_data?);
     let cookie = store
         .store_session(session)
         .await
