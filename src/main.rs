@@ -11,6 +11,7 @@ use clap::Parser;
 
 mod routes;
 mod models;
+mod librespot;
 use models::app_error::AppError;
 
 #[derive(Parser)]
@@ -80,7 +81,8 @@ async fn main() {
 
     let args = Args::parse();
     let app = Router::new()
-        .merge(routes::auth::get_routes(app_state))
+        .merge(routes::auth::get_routes(app_state.clone()))
+        .merge(routes::librespot::get_routes(app_state))
         .fallback(handler_404);
 
     println!("Listening on port {}", args.port);
