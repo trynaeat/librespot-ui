@@ -12,6 +12,7 @@ pub struct User {
     uri: String
 }
 
+#[derive(Debug)]
 pub struct AuthRedirect;
 
 impl IntoResponse for AuthRedirect {
@@ -47,7 +48,7 @@ where
         };
 
         let session = store
-            .load_session(session_cookie?.to_string())
+            .load_session(session_cookie?.value().to_string())
             .await
             .unwrap()
             .ok_or(AuthRedirect)?;

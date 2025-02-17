@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context};
 use axum::{
-    extract::{Query, State}, http::{header::SET_COOKIE, HeaderMap, header::COOKIE }, response::{IntoResponse, Redirect}, routing::{get, head, post}, Json, Router
+    extract::{Query, State}, http::{header::SET_COOKIE, HeaderMap, header::COOKIE, StatusCode }, response::{IntoResponse, Redirect}, routing::{get, head, post}, Json, Router
 };
 use oauth2::{basic::BasicClient, AuthorizationCode, CsrfToken, EndpointNotSet, EndpointSet, Scope, TokenResponse};
 use async_session::{MemoryStore, Session, SessionStore};
@@ -53,9 +53,9 @@ async fn csrf_token_validation_workflow(
 }
 
 pub async fn get_userinfo(
-    State(store): State<MemoryStore>,
-) -> impl IntoResponse {
-    
+    user: User,
+) -> Result<impl IntoResponse, AppError> {
+    Ok((StatusCode::OK, Json(user)))
 }
 
 pub async fn spotify_auth(
@@ -106,7 +106,7 @@ pub async fn login_authorized(
 ) -> Result<impl IntoResponse, AppError> {
     let cookie_header = headers.get(COOKIE).context("Failed to get Cookie")?.to_str()?;
     let cookies = Cookie::parse(cookie_header)?;
-    csrf_token_validation_workflow(&query, &cookies, &store);
+    csrf_token_validation_workflow(&query, &cookies, &store).await?;
 
     let http_client = reqwest::ClientBuilder::new()
         .build()
@@ -116,7 +116,6 @@ pub async fn login_authorized(
         .request_async(&http_client)
         .await
         .context("Failed to request token from auth server")?;
-    println!("Token: {:?}", token.access_token().clone().into_secret());
 
     let user_data = http_client
         .get("https://api.spotify.com/v1/me")
@@ -136,7 +135,11 @@ pub async fn login_authorized(
         .store_session(session)
         .await
         .context("Failed to store session");
-    let cookie = format!("{COOKIE_NAME}={cookie:?}; SameSite=Lax; HttpOnly; Secure; Path=/");
+    let cookie = match cookie {
+        Ok(c) => c.unwrap(),
+        Err(_) => "".to_string(),
+    };
+    let cookie = format!("{COOKIE_NAME}={cookie}; SameSite=Lax; HttpOnly; Secure; Path=/");
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.parse().context("Failed to parse cookie")?);
     Ok((headers, Redirect::to("/")))
