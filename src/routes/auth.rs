@@ -139,7 +139,7 @@ pub async fn login_authorized(
         Ok(c) => c.unwrap(),
         Err(_) => "".to_string(),
     };
-    let cookie = format!("{COOKIE_NAME}={cookie}; SameSite=Lax; HttpOnly; Secure; Path=/");
+    let cookie = format!("{COOKIE_NAME}={cookie}; SameSite=Lax; HttpOnly; Path=/");
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.parse().context("Failed to parse cookie")?);
     Ok((headers, Redirect::to("/")))
