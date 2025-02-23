@@ -5,7 +5,6 @@ function useLibreInfo () {
     return useQuery({
         queryKey: ['info'],
         queryFn: async(): Promise<LibreInfo> => {
-            console.log("hello");
             const response = await fetch(`/api/librespot/status`);
             return await response.json();
         },

@@ -27,6 +27,11 @@ function App() {
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{persister}}>
+        <nav className="navbar navbar-expand-lg navbar-light bg-light">
+          <div className='container-fluid'>
+            <a className='navbar-brand' href='#'>Librespot-UI</a>
+          </div>
+        </nav>
         <LibreStatus></LibreStatus>
       </PersistQueryClientProvider>
     </>
