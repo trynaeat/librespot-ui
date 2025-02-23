@@ -22,6 +22,8 @@ struct Args {
     port: i32,
     #[arg(short, long, default_value_t = String::from("alsa"))]
     backend: String,
+    #[arg(short, long, default_value_t = String::from("librespot-ui"))]
+    name: String,
 }
 
 #[derive(Clone)]
@@ -88,7 +90,8 @@ async fn main() -> Result<(), Box<dyn error::Error>>{
 
     let args = Args::parse();
     let config = LibrespotConfig {
-        backend: Some(args.backend)
+        backend: Some(args.backend),
+        name: Some(args.name),
     };
     let mut libre_inst = LIBERESPOT_INST.lock()?;
     *libre_inst = LibrespotInst::new(Some(config));

@@ -128,7 +128,7 @@ pub async fn login_authorized(
         .context("Failed to deserialize UserInfo");
     let mut session = Session::new();
     let _ = session
-        .insert("access_token", token.access_token());
+        .insert("access_token", token.access_token().secret());
     let _ = session
         .insert("user", &user_data?);
     let cookie = store

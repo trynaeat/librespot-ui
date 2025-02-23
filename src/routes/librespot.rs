@@ -3,7 +3,7 @@ use axum::{response::IntoResponse, Router, routing::get, http::StatusCode, Json}
 use crate::{librespot::spawner::SpawnError, models::{app_error::AppError, user::User}, AppState, LIBERESPOT_INST};
 
 pub async fn start_librespot (_user: User) -> Result<impl IntoResponse, SpawnError> {
-    return match LIBERESPOT_INST.lock().unwrap().spawn_librespot() {
+    return match LIBERESPOT_INST.lock().unwrap().spawn_librespot(&_user) {
         Ok(_) => Ok((StatusCode::OK, "Started.")),
         Err(e) => Err(e),
     };

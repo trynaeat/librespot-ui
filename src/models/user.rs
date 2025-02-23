@@ -8,8 +8,9 @@ static COOKIE_NAME: &str = "SESSION";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
-    display_name: String,
-    uri: String
+    pub display_name: String,
+    pub uri: String,
+    pub token: Option<String>,
 }
 
 #[derive(Debug)]
@@ -53,7 +54,9 @@ where
             .unwrap()
             .ok_or(AuthRedirect)?;
 
-        let user = session.get::<User>("user").ok_or(AuthRedirect)?;
+        let mut user = session.get::<User>("user").ok_or(AuthRedirect)?;
+        let token = session.get::<String>("access_token").ok_or(AuthRedirect)?;
+        user.token = Some(token);
 
         Ok(user)
     }

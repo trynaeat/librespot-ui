@@ -5,9 +5,12 @@ use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
+use crate::models::user::User;
+
 #[derive(Clone)]
 pub struct LibrespotConfig {
-    pub backend: Option<String>
+    pub backend: Option<String>,
+    pub name: Option<String>
 }
 
 #[derive(Serialize, Deserialize)]
@@ -98,8 +101,8 @@ impl LibrespotInst {
         Self { process: None, status: LibrespotStatus::Stopped, config }
     }
 
-    pub fn spawn_librespot(&mut self) -> Result<(), SpawnError>{
-        let config = self.config.clone().unwrap_or(LibrespotConfig {backend: None});
+    pub fn spawn_librespot(&mut self, user: &User) -> Result<(), SpawnError>{
+        let config = self.config.clone().unwrap_or(LibrespotConfig {backend: None, name: None});
         // Check if librespot process has died on its own
         let info = self.get_status();
         if matches!(info?.status, LibrespotStatus::Stopped) {
@@ -110,6 +113,10 @@ impl LibrespotInst {
             let result = Command::new("librespot")
                 .arg("--backend")
                 .arg(config.backend.unwrap_or("pipe".to_string()))
+                .arg("-n")
+                .arg(config.name.unwrap_or("librespot-ui".to_string()))
+                .arg("--access-token")
+                .arg(user.token.clone().unwrap_or("".to_string()))
                 .spawn();
             self.process = Some(result?);
             self.status = LibrespotStatus::Running;
