@@ -7,6 +7,7 @@ use axum::{
 };
 use librespot::spawner::{LibrespotConfig, LibrespotInst};
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl, TokenUrl};
+use tower_http::services::{ServeDir, ServeFile};
 use serde::{Deserialize, Serialize};
 use clap::Parser;
 
@@ -102,10 +103,13 @@ async fn main() -> Result<(), Box<dyn error::Error>>{
     // Release the mutex lock
     drop(libre_inst);
 
+
+    // Serve UI static assets
+    let serve_dir = ServeDir::new("librespot-ui-client/dist").not_found_service(ServeFile::new("librespot-ui-client/dist/index.html"));
     let app = Router::new()
         .merge(routes::auth::get_routes(app_state.clone()))
         .merge(routes::librespot::get_routes(app_state))
-        .fallback(handler_404);
+        .fallback_service(serve_dir);
 
     println!("Listening on port {}", args.port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
