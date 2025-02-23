@@ -70,7 +70,7 @@ fn oauth_client() -> Result<BasicClient, AppError> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn error::Error>>{
     let redirect_url = env::var("REDIRECT_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3000/auth/authorized".to_string());
+        .unwrap_or_else(|_| "http://127.0.0.1:3000/api/auth/authorized".to_string());
 
     let auth_url = env::var("AUTH_URL").unwrap_or_else(|_| {
         "https://accounts.spotify.com/authorize".to_string()

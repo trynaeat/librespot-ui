@@ -18,7 +18,7 @@ pub struct AuthRedirect;
 
 impl IntoResponse for AuthRedirect {
     fn into_response(self) -> Response {
-        Redirect::temporary("/auth/spotify").into_response()
+        Redirect::temporary("/api/auth/spotify").into_response()
     }
 }
 

@@ -25,8 +25,8 @@ pub async fn get_status (_user: User) -> Result<impl IntoResponse, SpawnError> {
 
 pub fn get_routes(state: AppState) -> Router {
     Router::new()
-        .route("/librespot/start", get(start_librespot))
-        .route("/librespot/stop", get(stop_librespot))
-        .route("/librespot/status", get(get_status))
+        .route("/api/librespot/start", get(start_librespot))
+        .route("/api/librespot/stop", get(stop_librespot))
+        .route("/api/librespot/status", get(get_status))
         .with_state(state)
 }

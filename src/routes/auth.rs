@@ -148,8 +148,8 @@ pub async fn login_authorized(
 pub fn get_routes(state: AppState) -> Router {
 
     Router::new()
-        .route("/auth/spotify/userinfo", get(get_userinfo))
-        .route("/auth/spotify", get(spotify_auth))
-        .route("/auth/authorized", get(login_authorized))
+        .route("/api/auth/spotify/userinfo", get(get_userinfo))
+        .route("/api/auth/spotify", get(spotify_auth))
+        .route("/api/auth/authorized", get(login_authorized))
         .with_state(state)
 }
