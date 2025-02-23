@@ -7,7 +7,7 @@ use async_session::{MemoryStore, Session, SessionStore};
 use serde::Deserialize;
 use cookie::Cookie;
 
-use crate::models::{app_error::AppError, user::User};
+use crate::models::{app_error::AppError, session::MySession, user::User};
 use crate::AppState;
 
 static COOKIE_NAME: &str = "SESSION";
@@ -147,9 +147,14 @@ pub async fn login_authorized(
 
 pub async fn logout(
     State(store): State<MemoryStore>,
-    headers: HeaderMap,
-) {
-    
+    session: MySession,
+) -> Result<impl IntoResponse, AppError> {
+    let session = session.get_session();
+    store
+        .destroy_session(session)
+        .await
+        .context("failed to destroy session")?;
+    Ok(Redirect::to("/"))
 }
 
 pub fn get_routes(state: AppState) -> Router {
@@ -158,5 +163,6 @@ pub fn get_routes(state: AppState) -> Router {
         .route("/api/auth/spotify/userinfo", get(get_userinfo))
         .route("/api/auth/spotify", get(spotify_auth))
         .route("/api/auth/authorized", get(login_authorized))
+        .route("/api/auth/logout", get(logout))
         .with_state(state)
 }
