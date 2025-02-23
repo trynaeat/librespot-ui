@@ -1,12 +1,6 @@
-use std::sync::{LazyLock, Mutex};
-
 use axum::{response::IntoResponse, Router, routing::get, http::StatusCode, Json};
 
-use crate::{librespot::spawner::{LibrespotInst, SpawnError}, models::{app_error::AppError, user::User}, AppState};
-
-static LIBERESPOT_INST: LazyLock<Mutex<LibrespotInst>> = LazyLock::new(|| {
-    Mutex::new(LibrespotInst::new())
-});
+use crate::{librespot::spawner::SpawnError, models::{app_error::AppError, user::User}, AppState, LIBERESPOT_INST};
 
 pub async fn start_librespot (_user: User) -> Result<impl IntoResponse, SpawnError> {
     return match LIBERESPOT_INST.lock().unwrap().spawn_librespot() {

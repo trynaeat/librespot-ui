@@ -1,10 +1,11 @@
-use std::env;
+use std::{env, sync::{LazyLock, Mutex}, error};
 
 use anyhow::{anyhow, Context, Result};
 use async_session::MemoryStore;
 use axum::{
     extract::FromRef, http::StatusCode, response::IntoResponse, routing::{get, post}, Json, Router
 };
+use librespot::spawner::{LibrespotConfig, LibrespotInst};
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet, RedirectUrl, TokenUrl};
 use serde::{Deserialize, Serialize};
 use clap::Parser;
@@ -19,6 +20,8 @@ use models::app_error::AppError;
 struct Args {
     #[arg(short, long, default_value_t = 3000)]
     port: i32,
+    #[arg(short, long, default_value_t = String::from("alsa"))]
+    backend: String,
 }
 
 #[derive(Clone)]
@@ -39,6 +42,10 @@ impl FromRef<AppState> for BasicClient<EndpointSet, EndpointNotSet, EndpointNotS
     }
 }
 
+static LIBERESPOT_INST: LazyLock<Mutex<LibrespotInst>> = LazyLock::new(|| {
+    Mutex::new(LibrespotInst::new(None))
+});
+
 fn oauth_client() -> Result<BasicClient, AppError> {
     // Environment variables (* = required):
     // *"CLIENT_ID"     "REPLACE_ME";
@@ -57,7 +64,7 @@ fn oauth_client() -> Result<BasicClient, AppError> {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn error::Error>>{
     let redirect_url = env::var("REDIRECT_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:3000/auth/authorized".to_string());
 
@@ -80,6 +87,14 @@ async fn main() {
     };
 
     let args = Args::parse();
+    let config = LibrespotConfig {
+        backend: Some(args.backend)
+    };
+    let mut libre_inst = LIBERESPOT_INST.lock()?;
+    *libre_inst = LibrespotInst::new(Some(config));
+    // Release the mutex lock
+    drop(libre_inst);
+
     let app = Router::new()
         .merge(routes::auth::get_routes(app_state.clone()))
         .merge(routes::librespot::get_routes(app_state))
@@ -87,7 +102,7 @@ async fn main() {
 
     println!("Listening on port {}", args.port);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    Ok(axum::serve(listener, app).await?)
 }
 
 async fn handler_404() -> impl IntoResponse {

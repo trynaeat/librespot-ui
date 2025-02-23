@@ -5,6 +5,11 @@ use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone)]
+pub struct LibrespotConfig {
+    pub backend: Option<String>
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum LibrespotStatus {
     Running,
@@ -22,7 +27,8 @@ impl LibrespotStatus {
 
 pub struct LibrespotInst {
     process: Option<Child>,
-    status: LibrespotStatus
+    status: LibrespotStatus,
+    config: Option<LibrespotConfig>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -88,11 +94,12 @@ impl IntoResponse for SpawnError {
 }
 
 impl LibrespotInst {
-    pub fn new() -> Self {
-        Self { process: None, status: LibrespotStatus::Stopped }
+    pub fn new(config: Option<LibrespotConfig>) -> Self {
+        Self { process: None, status: LibrespotStatus::Stopped, config }
     }
 
     pub fn spawn_librespot(&mut self) -> Result<(), SpawnError>{
+        let config = self.config.clone().unwrap_or(LibrespotConfig {backend: None});
         // Check if librespot process has died on its own
         let info = self.get_status();
         if matches!(info?.status, LibrespotStatus::Stopped) {
@@ -102,7 +109,7 @@ impl LibrespotInst {
         if (self.process.is_none() || matches!(self.status, LibrespotStatus::Stopped)) {
             let result = Command::new("librespot")
                 .arg("--backend")
-                .arg("pipe")
+                .arg(config.backend.unwrap_or("pipe".to_string()))
                 .spawn();
             self.process = Some(result?);
             self.status = LibrespotStatus::Running;
