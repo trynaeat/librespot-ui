@@ -1,15 +1,13 @@
 import './scss/styles.scss';
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
-import { useLibreInfo } from './hooks/librespot';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { LibreStatus } from './components/libreStatus';
 import { LibreButtons } from './components/libreButtons';
 import { NavBar } from './components/navBar';
+import { useUser } from './hooks/user';
+import { Home } from './components/home';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,9 +27,7 @@ function App() {
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{persister}}>
-        <NavBar></NavBar>
-        <div className='pb-3 pt-5'><LibreStatus></LibreStatus></div>
-        <LibreButtons></LibreButtons>
+        <Home></Home>
       </PersistQueryClientProvider>
     </>
   )
