@@ -43,7 +43,7 @@ export const NavBar = (props: PropsWithChildren<NavBarProps>) => {
                         <Dropdown.Menu>
                             <Dropdown.Header>Not Logged In</Dropdown.Header>
                             <Dropdown.Divider></Dropdown.Divider>
-                            <Dropdown.Item href="/login">Log In</Dropdown.Item>
+                            <Dropdown.Item href="/api/auth/spotify">Log In</Dropdown.Item>
                         </Dropdown.Menu>
                         )
                     }
