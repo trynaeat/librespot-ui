@@ -1,5 +1,3 @@
-import { Dropdown as BoostrapDropdown } from 'bootstrap';
-
 export const Dropdown = () => {
     return (
         <>

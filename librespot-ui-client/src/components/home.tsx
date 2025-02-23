@@ -4,7 +4,7 @@ import { LibreStatus } from "./libreStatus"
 import { NavBar } from "./navBar"
 
 export const Home = () => {
-    const { data: user, error, status } = useUser();
+    const { data: user, error: _error, status: _status } = useUser();
     return (
         <>
         <NavBar user={user}></NavBar>
