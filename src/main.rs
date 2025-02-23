@@ -27,6 +27,8 @@ struct Args {
     name: String,
     #[arg(short, long, default_value_t = String::from("/tmp/librespot"))]
     cache_path: String,
+    #[arg(short, long, default_value_t = String::from("librespot-ui-client/dist"), help = "Path to static site directory")]
+    static_path: String,
 }
 
 #[derive(Clone)]
@@ -105,7 +107,7 @@ async fn main() -> Result<(), Box<dyn error::Error>>{
 
 
     // Serve UI static assets
-    let serve_dir = ServeDir::new("librespot-ui-client/dist").not_found_service(ServeFile::new("librespot-ui-client/dist/index.html"));
+    let serve_dir = ServeDir::new(args.static_path).not_found_service(ServeFile::new("librespot-ui-client/dist/index.html"));
     let app = Router::new()
         .merge(routes::auth::get_routes(app_state.clone()))
         .merge(routes::librespot::get_routes(app_state))
