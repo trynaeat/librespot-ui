@@ -24,6 +24,8 @@ struct Args {
     backend: String,
     #[arg(short, long, default_value_t = String::from("librespot-ui"))]
     name: String,
+    #[arg(short, long, default_value_t = String::from("/tmp/librespot"))]
+    cache_path: String,
 }
 
 #[derive(Clone)]
@@ -92,9 +94,11 @@ async fn main() -> Result<(), Box<dyn error::Error>>{
     let config = LibrespotConfig {
         backend: Some(args.backend),
         name: Some(args.name),
+        cache_path: args.cache_path,
     };
     let mut libre_inst = LIBERESPOT_INST.lock()?;
     *libre_inst = LibrespotInst::new(Some(config));
+    libre_inst.spawn_librespot(None)?;
     // Release the mutex lock
     drop(libre_inst);
 

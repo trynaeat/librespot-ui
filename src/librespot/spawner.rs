@@ -10,7 +10,8 @@ use crate::models::user::User;
 #[derive(Clone)]
 pub struct LibrespotConfig {
     pub backend: Option<String>,
-    pub name: Option<String>
+    pub name: Option<String>,
+    pub cache_path: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -101,23 +102,31 @@ impl LibrespotInst {
         Self { process: None, status: LibrespotStatus::Stopped, config }
     }
 
-    pub fn spawn_librespot(&mut self, user: &User) -> Result<(), SpawnError>{
-        let config = self.config.clone().unwrap_or(LibrespotConfig {backend: None, name: None});
+    // If provided a user, spawn with their access token
+    // Otherwise use what's in the cache
+    pub fn spawn_librespot(&mut self, user: Option<&User>) -> Result<(), SpawnError>{
+        let config = self.config.clone().unwrap_or(LibrespotConfig {backend: None, name: None, cache_path: "/tmp/librespot".to_string()});
         // Check if librespot process has died on its own
         let info = self.get_status();
         if matches!(info?.status, LibrespotStatus::Stopped) {
             self.status = LibrespotStatus::Stopped;
         }
 
-        if (self.process.is_none() || matches!(self.status, LibrespotStatus::Stopped)) {
-            let result = Command::new("librespot")
+        if self.process.is_none() || matches!(self.status, LibrespotStatus::Stopped) {
+            let mut cmd = Command::new("librespot");
+            cmd
                 .arg("--backend")
                 .arg(config.backend.unwrap_or("pipe".to_string()))
                 .arg("-n")
                 .arg(config.name.unwrap_or("librespot-ui".to_string()))
-                .arg("--access-token")
-                .arg(user.token.clone().unwrap_or("".to_string()))
-                .spawn();
+                .arg("--cache")
+                .arg(config.cache_path);
+            if let Some(u) = user {
+                cmd
+                    .arg("--access-token")
+                    .arg(u.token.clone().unwrap_or("".to_string()));
+            };
+            let result = cmd.spawn();
             self.process = Some(result?);
             self.status = LibrespotStatus::Running;
             return Ok(())
