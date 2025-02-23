@@ -145,6 +145,13 @@ pub async fn login_authorized(
     Ok((headers, Redirect::to("/")))
 }
 
+pub async fn logout(
+    State(store): State<MemoryStore>,
+    headers: HeaderMap,
+) {
+    
+}
+
 pub fn get_routes(state: AppState) -> Router {
 
     Router::new()

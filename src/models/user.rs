@@ -1,5 +1,4 @@
 use { serde::Deserialize, serde::Serialize };
-use anyhow::Context;
 use async_session::{MemoryStore, SessionStore};
 use axum::{ extract::{FromRef, FromRequestParts}, http::request::Parts, http::header::COOKIE, response::{IntoResponse, Redirect, Response} };
 use cookie::Cookie;

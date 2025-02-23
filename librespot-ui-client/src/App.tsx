@@ -9,6 +9,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { LibreStatus } from './components/libreStatus';
 import { LibreButtons } from './components/libreButtons';
+import { NavBar } from './components/navBar';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,11 +29,7 @@ function App() {
       <PersistQueryClientProvider
         client={queryClient}
         persistOptions={{persister}}>
-        <nav className="navbar navbar-expand-lg navbar-light bg-light">
-          <div className='container-fluid'>
-            <a className='navbar-brand' href='#'>Librespot-UI</a>
-          </div>
-        </nav>
+        <NavBar></NavBar>
         <div className='pb-3 pt-5'><LibreStatus></LibreStatus></div>
         <LibreButtons></LibreButtons>
       </PersistQueryClientProvider>
